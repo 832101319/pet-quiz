@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>魔法生物商店 · 斯莱特林引路店员</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', 'SimSun', serif;
+            background: #0a0a0f;
+            color: #c8c8d0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 开场动画 */
+        .intro-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0f;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 2s ease;
+        }
+
+        .intro-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .intro-text {
+            max-width: 600px;
+            padding: 40px;
+            text-align: center;
+            line-height: 2.2;
+            font-size: 1.1rem;
+            color: #8a8a9a;
+        }
+
+        .intro-text p {
+            margin-bottom: 20px;
+            opacity: 0;
+            animation: fadeInUp 1s ease forwards;
+        }
+
+        .intro-text p:nth-child(1) { animation-delay: 0.5s; }
+        .intro-text p:nth-child(2) { animation-delay: 1.5s; }
+        .intro-text p:nth-child(3) { animation-delay: 2.5s; }
+        .intro-text p:nth-child(4) { animation-delay: 3.5s; }
+        .intro-text p:nth-child(5) { animation-delay: 4.5s; }
+        .intro-text p:nth-child(6) { animation-delay: 5.5s; }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .start-btn {
+            margin-top: 40px;
+            padding: 15px 50px;
+            background: transparent;
+            border: 1px solid #4a4a5a;
+            color: #a0a0b0;
+            font-size: 1rem;
+            cursor: pointer;
+            font-family: inherit;
+            letter-spacing: 4px;
+            opacity: 0;
+            animation: fadeInUp 1s ease 6.5s forwards;
+            transition: all 0.3s ease;
+        }
+
+        .start-btn:hover {
+            border-color: #6a6a7a;
+            color: #c8c8d0;
+            background: rgba(100, 100, 120, 0.1);
+        }
+
+        /* 主容器 */
+        .main-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px 20px;
+            display: none;
+        }
+
+        .main-container.active {
+            display: block;
+            animation: fadeIn 1s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 2px;
+            background: #4a4a5a;
+            transition: width 0.5s ease;
+            z-index: 100;
+        }
+
+        .progress-text {
+            position: fixed;
+            top: 10px;
+            right: 20px;
+            font-size: 0.8rem;
+            color: #4a4a5a;
+            z-index: 100;
+        }
+
+        /* 题目部分标题 */
+        .part-title {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #5a5a6a;
+            letter-spacing: 6px;
+            margin-bottom: 40px;
+            padding-top: 20px;
+        }
+
+        /* 题目卡片 */
+        .question-card {
+            background: rgba(20, 20, 30, 0.6);
+            border: 1px solid #1a1a2a;
+            padding: 40px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .question-number {
+            position: absolute;
+            top: -12px;
+            left: 30px;
+            background: #0a0a0f;
+            padding: 0 15px;
+            font-size: 0.8rem;
+            color: #4a4a5a;
+            letter-spacing: 2px;
+        }
+
+        .question-text {
+            font-size: 1.15rem;
+            line-height: 1.8;
+            color: #b0b0c0;
+            margin-bottom: 30px;
+        }
+
+        /* 选项 */
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option {
+            padding: 18px 25px;
+            border: 1px solid #1e1e2e;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .option:hover {
+            border-color: #3a3a4a;
+            background: rgba(30, 30, 45, 0.5);
+        }
+
+        .option.selected {
+            border-color: #4a4a5a;
+            background: rgba(40, 40, 60, 0.4);
+        }
+
+        .option-label {
+            color: #5a5a6a;
+            font-size: 0.9rem;
+            min-width: 25px;
+            margin-top: 2px;
+        }
+
+        .option-text {
+            color: #9090a0;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* 自由输入题 */
+        .free-input {
+            width: 100%;
+            padding: 15px;
+            background: rgba(15, 15, 25, 0.8);
+            border: 1px solid #1e1e2e;
+            color: #b0b0c0;
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .free-input:focus {
+            border-color: #3a3a4a;
+        }
+
+        .free-input::placeholder {
+            color: #3a3a4a;
+        }
+
+        /* 导航按钮 */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            padding: 0 10px;
+        }
+
+        .nav-btn {
+            padding: 12px 35px;
+            background: transparent;
+            border: 1px solid #2a2a3a;
+            color: #6a6a7a;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-family: inherit;
+            letter-spacing: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            border-color: #4a4a5a;
+            color: #a0a0b0;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .nav-btn.primary {
+            border-color: #3a3a4a;
+            color: #8a8a9a;
+        }
+
+        .nav-btn.primary:hover {
+            border-color: #5a5a6a;
+            color: #c8c8d0;
+        }
+
+        /* 忌讳问卷特殊样式 */
+        .taboo-section {
+            border-color: #2a1a1a;
+            background: rgba(20, 10, 10, 0.4);
+        }
+
+        .taboo-section .question-text {
+            color: #9a8a8a;
+        }
+
+        /* 结果页面 */
+        .result-screen {
+            display: none;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        .result-screen.active {
+            display: block;
+            animation: fadeIn 2s ease;
+        }
+
+        .result-title {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #5a5a6a;
+            letter-spacing: 8px;
+            margin-bottom: 50px;
+        }
+
+        .scene-card {
+            background: rgba(15, 15, 25, 0.4);
+            border: 1px solid #1a1a2a;
+            padding: 35px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .scene-creature {
+            font-size: 0.85rem;
+            color: #5a5a6a;
+            letter-spacing: 4px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #1e1e2e;
+        }
+
+        .scene-text {
+            line-height: 2;
+            color: #a0a0b0;
+            font-size: 0.95rem;
+            white-space: pre-line;
+        }
+
+        .summary-section {
+            margin-top: 50px;
+            padding: 35px;
+            border: 1px solid #1e1e2e;
+            text-align: center;
+        }
+
+        .summary-text {
+            line-height: 2.2;
+            color: #b0b0c0;
+            font-size: 1rem;
+            white-space: pre-line;
+        }
+
+        /* 邮箱输入 */
+        .email-section {
+            margin-top: 50px;
+            text-align: center;
+        }
+
+        .email-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px 20px;
+            background: rgba(15, 15, 25, 0.8);
+            border: 1px solid #1e1e2e;
+            color: #b0b0c0;
+            font-family: inherit;
+            font-size: 1rem;
+            text-align: center;
+            outline: none;
+            margin-bottom: 20px;
+        }
+
+        .email-input:focus {
+            border-color: #3a3a4a;
+        }
+
+        .email-input::placeholder {
+            color: #3a3a4a;
+        }
+
+        .submit-btn {
+            padding: 15px 60px;
+            background: transparent;
+            border: 1px solid #3a3a4a;
+            color: #8a8a9a;
+            font-size: 1rem;
+            cursor: pointer;
+            font-family: inherit;
+            letter-spacing: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            border-color: #5a5a6a;
+            color: #c8c8d0;
+            background: rgba(40, 40, 60, 0.3);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* 加载动画 */
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #4a4a5a;
+            letter-spacing: 4px;
+        }
+
+        /* 粒子背景 */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: rgba(100, 100, 120, 0.3);
+            border-radius: 50%;
+            animation: float 15s infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* 最终选择页面 */
+        .final-choice {
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .choice-title {
+            font-size: 0.9rem;
+            color: #5a5a6a;
+            letter-spacing: 4px;
+            margin-bottom: 30px;
+        }
+
+        .creature-choices {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .creature-choice {
+            padding: 12px 30px;
+            border: 1px solid #1e1e2e;
+            background: transparent;
+            color: #6a6a7a;
+            font-family: inherit;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .creature-choice:hover {
+            border-color: #3a3a4a;
+            color: #a0a0b0;
+        }
+
+        .creature-choice.selected {
+            border-color: #4a4a5a;
+            color: #c8c8d0;
+            background: rgba(40, 40, 60, 0.3);
+        }
+
+        /* 成功页面 */
+        .success-screen {
+            display: none;
+            text-align: center;
+            padding: 100px 20px;
+        }
+
+        .success-screen.active {
+            display: block;
+            animation: fadeIn 2s ease;
+        }
+
+        .success-text {
+            font-size: 1.1rem;
+            color: #8a8a9a;
+            line-height: 2.2;
+            margin-bottom: 40px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 600px) {
+            .intro-text {
+                padding: 20px;
+                font-size: 1rem;
+            }
+
+            .question-card {
+                padding: 25px;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .nav-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 粒子背景 -->
+    <div class="particles" id="particles"></div>
+
+    <!-- 开场白 -->
+    <div class="intro-screen" id="introScreen">
+        <div class="intro-text">
+            <p>门是虚掩的。</p>
+            <p>柜台后面没有人点灯，你感受到奇异的混杂的视线。</p>
+            <p>一只大灰鸮从横梁上静静地歪头看你。</p>
+            <p>"小贵客，你身上有股令人着迷的气味。"</p>
+            <p>说话的人从暗处走出来，袍角拖过地板。</p>
+            <p>"进来吧。"他指了指前面那张旧长桌。"坐，别拘谨。"</p>
+        </div>
+        <button class="start-btn" onclick="startQuiz()">落座</button>
+    </div>
+
+    <!-- 主测试区 -->
+    <div class="main-container" id="mainContainer">
+        <div class="progress-bar" id="progressBar"></div>
+        <div class="progress-text" id="progressText">1 / 25</div>
+        <div id="quizContent"></div>
+        <div class="nav-buttons">
+            <button class="nav-btn" id="prevBtn" onclick="prevQuestion()" disabled>上一题</button>
+            <button class="nav-btn primary" id="nextBtn" onclick="nextQuestion()">下一题</button>
+        </div>
+    </div>
+
+    <!-- 结果页 -->
+    <div class="result-screen" id="resultScreen">
+        <div class="result-title">结果 · 它们走向你</div>
+        <div id="scenesContainer"></div>
+        <div class="summary-section">
+            <div class="summary-text" id="summaryText"></div>
+        </div>
+        <div class="final-choice">
+            <div class="choice-title">你的选择是</div>
+            <div class="creature-choices" id="creatureChoices"></div>
+        </div>
+        <div class="email-section">
+            <input type="email" class="email-input" id="emailInput" placeholder="输入你的邮箱，接收结果">
+            <br>
+            <button class="submit-btn" id="finalSubmitBtn" onclick="submitFinal()">确认选择</button>
+        </div>
+    </div>
+
+    <!-- 成功页 -->
+    <div class="success-screen" id="successScreen">
+        <div class="success-text">
+            选择已记录。
+            <br><br>
+            你的魔法生物正在等待你。
+            <br>
+            结果将发送至你的邮箱。
+        </div>
+        <button class="submit-btn" onclick="location.reload()">重新开始</button>
+    </div>
+
+    <script>
+        // 生成粒子
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 30; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDelay = Math.random() * 15 + 's';
+                p.style.animationDuration = (10 + Math.random() * 10) + 's';
+                container.appendChild(p);
+            }
+        }
+        createParticles();
+
+        let questions = [];
+        let tabooQuestion = null;
+        let currentIndex = 0;
+        let answers = {};
+        let tabooAnswer = null;
+        let colorAnswer = '';
+        let quizResult = null;
+        let selectedCreature = null;
+
+        // 获取题目
+        async function loadQuestions() {
+            try {
+                const res = await fetch('/api/questions');
+                const data = await res.json();
+                questions = data.questions;
+                tabooQuestion = data.taboo;
+            } catch (e) {
+                console.error('加载题目失败', e);
+            }
+        }
+
+        loadQuestions();
+
+        function startQuiz() {
+            document.getElementById('introScreen').classList.add('hidden');
+            setTimeout(() => {
+                document.getElementById('mainContainer').classList.add('active');
+                renderQuestion();
+            }, 1000);
+        }
+
+        function renderQuestion() {
+            const container = document.getElementById('quizContent');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            const totalQuestions = questions.length + 1; // +1 for taboo
+            const isTaboo = currentIndex >= questions.length;
+            const q = isTaboo ? tabooQuestion : questions[currentIndex];
+
+            // 更新进度
+            const progress = ((currentIndex + 1) / totalQuestions) * 100;
+            progressBar.style.width = progress + '%';
+            progressText.textContent = `${currentIndex + 1} / ${totalQuestions}`;
+
+            // 更新按钮
+            prevBtn.disabled = currentIndex === 0;
+            if (currentIndex === totalQuestions - 1) {
+                nextBtn.textContent = '查看结果';
+            } else {
+                nextBtn.textContent = '下一题';
+            }
+
+            // 渲染题目
+            let html = '';
+
+            if (!isTaboo) {
+                html += `<div class="part-title">${q.part}</div>`;
+                html += `<div class="question-card">`;
+                html += `<div class="question-number">第 ${q.id} 题</div>`;
+                html += `<div class="question-text">${q.text}</div>`;
+
+                if (q.free_text) {
+                    html += `<input type="text" class="free-input" id="freeInput" placeholder="你的颜色：__________" value="${colorAnswer}">`;
+                    if (q.note) {
+                        html += `<div style="margin-top: 15px; font-size: 0.8rem; color: #3a3a4a;">${q.note}</div>`;
+                    }
+                } else {
+                    html += `<div class="options">`;
+                    for (const opt of q.options) {
+                        const selected = answers[q.id] === opt.label ? 'selected' : '';
+                        html += `
+                            <div class="option ${selected}" onclick="selectOption(${q.id}, '${opt.label}')">
+                                <span class="option-label">${opt.label}</span>
+                                <span class="option-text">${opt.text}</span>
+                            </div>
+                        `;
+                    }
+                    html += `</div>`;
+                }
+                html += `</div>`;
+            } else {
+                // 忌讳问卷
+                html += `<div class="part-title">${q.part}</div>`;
+                html += `<div class="question-card taboo-section">`;
+                html += `<div class="question-text">${q.text}</div>`;
+                html += `<div class="options">`;
+                for (const opt of q.options) {
+                    const selected = tabooAnswer === opt.label ? 'selected' : '';
+                    html += `
+                        <div class="option ${selected}" onclick="selectTaboo('${opt.label}')">
+                            <span class="option-label">${opt.label}</span>
+                            <span class="option-text">${opt.text}</span>
+                        </div>
+                    `;
+                }
+                html += `</div>`;
+                html += `</div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function selectOption(questionId, label) {
+            answers[questionId] = label;
+            renderQuestion();
+        }
+
+        function selectTaboo(label) {
+            tabooAnswer = label;
+            renderQuestion();
+        }
+
+        function prevQuestion() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                renderQuestion();
+            }
+        }
+
+        function nextQuestion() {
+            const totalQuestions = questions.length + 1;
+
+            // 保存自由输入
+            const freeInput = document.getElementById('freeInput');
+            if (freeInput) {
+                colorAnswer = freeInput.value;
+            }
+
+            if (currentIndex >= questions.length) {
+                // 在忌讳问卷页面
+                if (!tabooAnswer) {
+                    alert('请选择一项');
+                    return;
+                }
+                // 提交
+                submitQuiz();
+                return;
+            }
+
+            // 检查当前题目是否已回答
+            const q = questions[currentIndex];
+            if (!q.free_text && !answers[q.id]) {
+                alert('请选择一个选项');
+                return;
+            }
+
+            if (currentIndex < totalQuestions - 1) {
+                currentIndex++;
+                renderQuestion();
+            }
+        }
+
+        async function submitQuiz() {
+            const nextBtn = document.getElementById('nextBtn');
+            nextBtn.disabled = true;
+            nextBtn.textContent = '计算中...';
+
+            const payload = {
+                answers: Object.entries(answers).map(([id, label]) => ({
+                    question_id: parseInt(id),
+                    option_label: label
+                })),
+                taboo_option: tabooAnswer,
+                email: 'temp@example.com', // 临时邮箱，后面会改
+                color: colorAnswer
+            };
+
+            // 添加自由输入题
+            if (colorAnswer) {
+                payload.answers.push({
+                    question_id: 21,
+                    free_text: colorAnswer
+                });
+            }
+
+            try {
+                const res = await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                quizResult = await res.json();
+                showResult();
+            } catch (e) {
+                console.error('提交失败', e);
+                alert('提交失败，请重试');
+                nextBtn.disabled = false;
+                nextBtn.textContent = '查看结果';
+            }
+        }
+
+        function showResult() {
+            document.getElementById('mainContainer').classList.remove('active');
+            document.getElementById('resultScreen').classList.add('active');
+
+            // 渲染场景
+            const scenesContainer = document.getElementById('scenesContainer');
+            let scenesHtml = '';
+            for (const scene of quizResult.scenes) {
+                scenesHtml += `
+                    <div class="scene-card">
+                        <div class="scene-creature">【${scene.creature} · 走出画面】</div>
+                        <div class="scene-text">${scene.scene}</div>
+                    </div>
+                `;
+            }
+            scenesContainer.innerHTML = scenesHtml;
+
+            // 渲染总结
+            document.getElementById('summaryText').textContent = quizResult.summary;
+
+            // 渲染选择按钮
+            const choicesContainer = document.getElementById('creatureChoices');
+            let choicesHtml = '';
+            for (const creature of quizResult.top_creatures) {
+                choicesHtml += `
+                    <button class="creature-choice" onclick="selectCreature('${creature}', this)">${creature}</button>
+                `;
+            }
+            choicesContainer.innerHTML = choicesHtml;
+        }
+
+        function selectCreature(creature, btn) {
+            selectedCreature = creature;
+            document.querySelectorAll('.creature-choice').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        }
+
+        async function submitFinal() {
+            const email = document.getElementById('emailInput').value;
+            if (!email || !email.includes('@')) {
+                alert('请输入有效的邮箱地址');
+                return;
+            }
+            if (!selectedCreature) {
+                alert('请选择一只魔法生物');
+                return;
+            }
+
+            const submitBtn = document.getElementById('finalSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '发送中...';
+
+            // 重新提交，带上正确的邮箱
+            const payload = {
+                answers: Object.entries(answers).map(([id, label]) => ({
+                    question_id: parseInt(id),
+                    option_label: label
+                })),
+                taboo_option: tabooAnswer,
+                email: email,
+                color: colorAnswer
+            };
+
+            if (colorAnswer) {
+                payload.answers.push({
+                    question_id: 21,
+                    free_text: colorAnswer
+                });
+            }
+
+            try {
+                const res = await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+
+                // 显示成功页面
+                document.getElementById('resultScreen').classList.remove('active');
+                document.getElementById('successScreen').classList.add('active');
+
+                // TODO: 生成PDF并发送邮件
+                console.log('用户选择:', selectedCreature);
+                console.log('邮箱:', email);
+            } catch (e) {
+                console.error('提交失败', e);
+                alert('提交失败，请重试');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '确认选择';
+            }
+        }
+    </script>
+</body>
+</html>
